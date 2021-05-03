@@ -3,11 +3,17 @@
 #define STEPPER_MOTOR_STEPPERDEFINE_HPP
 
 #include <Arduino.h>
+#include <TM1638.h>
+#include <TM1638QYF.h>
 
-#define MAX_AXIS    5
+#define MAX_AXIS            6u
 
-#define DELAY_C0    2000    // 1000; acceleration until 5500 pulse
-#define MIN_DELAY   50
+// setting 1: 8000, 200.0f
+#define DELAY_C0    600
+#define MIN_DELAY   20.0f
+
+#define TIMER1_INTERRUPTS_ON    TIMSK1 |=  (1u << (unsigned)OCIE1A);
+#define TIMER1_INTERRUPTS_OFF   TIMSK1 &= ~(1u << (unsigned)OCIE1A);
 
 #define X_PPR               (long)2000 // pulse per rotation for stepper motor
 #define Y_PPR               (long)2000 // pulse per rotation for stepper motor

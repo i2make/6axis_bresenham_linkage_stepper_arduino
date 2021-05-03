@@ -6,7 +6,11 @@ Motor::Motor(void(* _direction)(int), void(* _pulse)()) {
     direction = _direction;
     pulse = _pulse;
 
-    // setting variable
-    delayC0 = DELAY_C0;
-    delayValue = delayC0;
+    currentPosition = 0;                    // current position
+    targetPosition = 0;                 // target position
+    dy = 0;                    // delta y = current position - newPosition
+    absDy = 0;                 // abs(dy)
+
+    dirValue = 0;               // position add dir (dir = 1 or -1)
+    over = 0;                   // using bresenham line algorithm
 }

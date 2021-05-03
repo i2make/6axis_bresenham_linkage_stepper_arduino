@@ -1,6 +1,6 @@
 
 #include "StepperDefine.hpp"
-#define DELAY_BETWEEN_PULSE         2
+#define DELAY_BETWEEN_PULSE         3
 
 /// X axis 1 stepping pulse generation
 void xPulse() {
@@ -73,3 +73,4 @@ void cPulse() {
 void cDirection(int dir) {
     digitalWrite(C_DIR_PIN, dir > 0 ? 1 : 0);
 }
+

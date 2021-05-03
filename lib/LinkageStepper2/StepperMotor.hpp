@@ -11,16 +11,13 @@ struct Motor
     void (* direction)(int);    // direction function
     void (* pulse)();           // pulse function
 
-    long dx;                    // dx
-    long newDx;                 // target position
-    long dy;                    // delta y = position - newPosition
+    long currentPosition;                    // current position
+    long targetPosition;                 // target position
+    long dy;                    // delta y = current position - newPosition
     long absDy;                 // abs(dy)
-    int dirValue;               // position add dir (dir = 1 or -1)
-    long over;                  // bresenham line's parameter
 
-    float delayC0;              // initial delay value
-    float delayValue;           // current delay value
-    long delayN;                // number of acceleration step
+    short dirValue;               // position add dir (dir = 1 or -1)
+    long over;                  // bresenham line's parameter
 };
 
 #endif //STEPPER_MOTOR_STEPPERMOTOR_HPP
