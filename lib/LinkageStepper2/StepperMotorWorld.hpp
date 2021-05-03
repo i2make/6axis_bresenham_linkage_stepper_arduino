@@ -3,9 +3,18 @@
 
 #include <StepperMotor.hpp>
 
+// moving flag define
+#define pause_msk                       (1u << 0u)
+#define resume_msk                      (1u << 1u)
+#define resumeReady_msk                 (1u << 2u)
+#define movementDone_msk                (1u << 3u)
+
+
 struct World
 {
-    // method
+    // method ///////////////////////////////////////////////////////////
+public:
+
     World(Motor* _motor);                   // constructor
 
     Motor* motor[MAX_AXIS];                 // number of motor
@@ -30,10 +39,16 @@ struct World
 
     void resumeMoving();        // resume method
 
-    // variable
+    bool movingDone();          // moving done ?
+
+private:
+
+
+    // variable ////////////////////////////////////////////////////////
+public:
     unsigned short motorIndex;          // added motor number
     unsigned short maxDyMotor;          // max long distance moving motor
-    unsigned long  currentDelay         // setting delay value for current speed
+    unsigned long  currentDelay;        // setting delay value for current speed
 
     unsigned long stepCounter;          // Number of steps to move
     unsigned int accelNstep;            // n step of acceleration
@@ -42,16 +57,16 @@ struct World
     unsigned int pauseDecelNstep;       // using pause deceleration
     volatile float delayValue;          // current delay value
 
-    volatile bool movementDone;         // complete move
-    volatile bool pause;                // pause flag
-    volatile bool resume;               // resume flag
-    volatile bool resumeReady;          // resume after pause
+    //volatile bool movementDone;         // complete move
+    //volatile bool pause;                // pause flag
+    //volatile bool resume;               // resume flag
+    //volatile bool resumeReady;          // resume after pause
 
     // 0000 1000    : movementDone
     // 0000 0100    : resumeReady
     // 0000 0010    : resume
     // 0000 0001    : pause
-    bool movingFlag;                    // flag for moving status
+    unsigned short movingFlag;           // flag for moving status
 
 
 };

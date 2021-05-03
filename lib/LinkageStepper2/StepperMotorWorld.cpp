@@ -10,7 +10,8 @@
 World::World(Motor* _motor) {
     motor[0] = _motor;
     motorIndex = 1;
-    resumeReady = false;
+    //resumeReady = false;
+    movingFlag &= ~resumeReady_msk;
 }
 
 ///////////////////////////////////////////////////
@@ -128,18 +129,24 @@ float World::setDelay() {
     // 움직일 거리가 짧아서 가속이 끝나기 전에 감속이 시작되면
     // acelNstep 값과 decelNstep 값을 설정한다
 
-////////////////////////////////////////////////////////////////////////////////
-    // start acceleration 가속 시작
+    ////////////////////////////////////////////////////////////////////////////
+    /// start acceleration 가속 시작
+    ////////////////////////////////////////////////////////////////////////////
     if (stepCounter == 0) {
         stepCounter++;
-        return DELAY_C0;
+        return DELAY_C0;                    // initial delay value
     }
-////////////////////////////////////////////////////////////////////////////////
+
+
+    ////////////////////////////////////////////////////////////////////////////
     // During acceleration 가속 중
+    ////////////////////////////////////////////////////////////////////////////
     if (accelNstep == 0) {
 
         // calculate delay value for n step
-        delayValue = delayValue - (2 * delayValue) / (4 * (float) stepCounter + 1);
+        delayValue =
+                delayValue - (2 * delayValue) / (4 * (float) stepCounter + 1);
+        stepCounter++;
 
         // 최대 속도에 도달하면
         if (delayValue < MIN_DELAY) {
@@ -154,98 +161,119 @@ float World::setDelay() {
             decelNstep = stepCounter;
             pauseDecelNstep = stepCounter;
         }
+
+        return delayValue;
     }
 
-    //////////////////////////////////////////////////////////
-    /// 등속, 감속
-    //////////////////////////////////////////////////////////
     else {
-        // starting deceleration 감속 시작
+        ////////////////////////////////////////////////////////////////////////
+        // starting deceleration 감속
+        ////////////////////////////////////////////////////////////////////////
         if (stepCounter > motor[maxDyMotor]->absDy - accelNstep) {
             decelNstep--;
-//            if (decelNstep == 0) {
-//                movementDone = true;
-//            }
+            stepCounter++;
 
             // stop condition
-            if (stepCounter == motor[maxDyMotor]->absDy - 1) { //?
-                movementDone = true;
+            if (stepCounter == motor[maxDyMotor]->absDy) {
+                //movementDone = true;
+                movingFlag |= movementDone_msk;
                 return delayValue;
             }
 
             // calculate delay value for n step
-            delayValue = (delayValue * float(4 * decelNstep + 1)) / float(4 * decelNstep + 1 - 2);
-        }
-////////////////////////////////////////////////////////////////////////////////
-        // pause 일시 정지
-        if (pause) {
-            if (pauseDecelNstep == 0) {
-                TIMER1_INTERRUPTS_OFF
-                pause = false;
-                resumeReady = true;
-                pauseDecelNstep = decelNstep;
-                stepCounter++; //?
-                //return delayValue;
+            delayValue = (delayValue * float(4 * decelNstep + 1)) /
+                         float(4 * decelNstep + 1 - 2);
+
+            return delayValue;
+        } //if
+
+
+        else {
+            ////////////////////////////////////////////////////////////////////////
+            // 등속
+            ////////////////////////////////////////////////////////////////////////
+            stepCounter++;
+
+            // pause 일시 정지
+            // if (pause){
+            if (movingFlag & pause_msk) {           // pause flag on ?
+                if (pauseDecelNstep == 0) {
+                    TIMER1_INTERRUPTS_OFF
+                    //pause = false;
+                    movingFlag &= ~pause_msk;       // pause flag off
+                    //resumeReady = true;
+                    movingFlag |= resumeReady_msk;
+                    pauseDecelNstep = decelNstep;
+
+                    //return delayValue;
+                }
+
+                // calculate delay value for n step
+                delayValue = (delayValue * float(4 * decelNstep + 1)) /
+                             float(4 * decelNstep + 1 - 2);
+
+                pauseDecelNstep--;
             }
-
-            // calculate delay value for n step
-            delayValue = (delayValue * float(4 * decelNstep + 1)) / float(4 * decelNstep + 1 - 2);
-
-            pauseDecelNstep--;
-        }
 ////////////////////////////////////////////////////////////////////////////////
-        // resume 재개
-        if (resume) {
-            // start acceleration
-            if (resumeAccelNstep == 0) {
+            // resume 재개
+            //if (resume) {
+            if (movingFlag & resume_msk) {
+                // start acceleration
+                if (resumeAccelNstep == 0) {
+                    resumeAccelNstep++;
+                    delayValue = DELAY_C0;
+                    return DELAY_C0;
+                }
+
+                delayValue = delayValue - (2 * delayValue) /
+                                          (4 * (float) resumeAccelNstep + 1);
+
+                // reached max speed
+                if (delayValue < MIN_DELAY) {
+                    delayValue = MIN_DELAY;
+                    //resume = false;
+                    movingFlag &= ~resume_msk;
+                    //resumeReady = false;
+                    movingFlag &= ~resumeReady_msk;
+                    resumeAccelNstep = 0;
+
+                    return delayValue;
+                }
                 resumeAccelNstep++;
-                delayValue = DELAY_C0;
-                return DELAY_C0;
             }
 
-            delayValue = delayValue - (2 * delayValue) / (4 * (float) resumeAccelNstep + 1);
-
-            // reached max speed
-            if (delayValue < MIN_DELAY) {
-                delayValue = MIN_DELAY;
-                resume = false;
-                resumeReady = false;
-                resumeAccelNstep = 0;
-                stepCounter++;//?
-                return delayValue;
-            }
-            resumeAccelNstep++;
-        }
-////////////////////////////////////////////////////////////////////////////////
-    } //else
-    stepCounter++;
-    return delayValue;
+            return delayValue;
+        } //else 등속
+    }
 }
+
 
 void World::moving(long _x, long _y, long _z, long _a, long _b, long _c,
                    void(func)()) {
-    movementDone = false;
+    //movementDone = false;
+    movingFlag &= ~movementDone_msk;
     stepCounter = 0;
     accelNstep = 0;
     delayValue = DELAY_C0;
 
     bresenham(_x, _y, _z, _a, _b, _c);
 
-    while (!movementDone) {
+    while (!movingDone()) {
         func();
     }
     TIMER1_INTERRUPTS_OFF
 }
 
 void World::moving(long _x, long _y, long _z, long _a, long _b, long _c) {
-    movementDone = false;
+    //movementDone = false;
+    movingFlag &= ~movementDone_msk;
     stepCounter = 0;
     accelNstep = 0;
     delayValue = DELAY_C0;
 
     bresenham(_x, _y, _z, _a, _b, _c);
 
-    while (!movementDone);
+    while (!movingDone());
     TIMER1_INTERRUPTS_OFF
 }
 
@@ -256,13 +284,20 @@ bool World::addMotor(Motor* _motor) {
 }
 
 void World::pauseMoving() {
-    pause = true;                   // activate pause
+    //pause = true;                   // activate pause
+    movingFlag |= pause_msk;
 }
 
 void World::resumeMoving() {
-    if (resumeReady) {              // activate after pause
+    //if (resumeReady) {              // activate after pause
+    if (movingFlag & resumeReady_msk) {
         TIMER1_INTERRUPTS_ON
         resumeAccelNstep = 0;       // reset resume acceleration step counter
-        resume = true;              // activate resume
+        //resume = true;              // activate resume
+        movingFlag |= resume_msk;
     }
+}
+
+bool World::movingDone() {
+    return movingFlag & movementDone_msk;
 }

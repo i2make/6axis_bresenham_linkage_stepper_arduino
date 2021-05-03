@@ -135,10 +135,11 @@ ISR(TIMER1_COMPA_vect) {
 //        world.generatePulse();      // generate pulse
 //    }
 
-    if (!world.movementDone) {
+    //if (!world.movementDone) {
+    if (!world.movingDone()) {
 
         //OCR1A = 65000;
-        TCNT1 = DELAY_C0;
+        TCNT1 = DELAY_C0;           // for regular interval
 
         OCR1A = world.setDelay();   // delay between steps
         TCNT1 = 0;
@@ -184,9 +185,7 @@ void setup() {
     cli();
     TCCR1A = 0;
     TCCR1B = 0;
-    //TCNT1 = 0;
 
-    //OCR1A = DELAY_C0;                         // compare value
     TCCR1B |= (1 << WGM12);                   // CTC mode OCR1A(TOP)
     //TCCR1B |= ((1 << CS12) | (0 << CS11) | (1 << CS10));    // clk/1024 prescaler
     TCCR1B |= ((0 << CS12) | (1 << CS11) | (1 << CS10));    // clk/64 prescaler
