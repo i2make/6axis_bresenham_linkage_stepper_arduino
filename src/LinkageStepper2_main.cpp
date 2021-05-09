@@ -93,19 +93,14 @@ void update(TM1638QYF* _module, word* _mode) {
             break;
 
         case 4096: //S14
-            // pause 해제
+            // resume
             world.resumeMoving();
             *_mode = 0;
             break;
 
         case 8192: //S15
-            if (runningSecs % 2 == 0) {
-                _module->setDisplayToString("TM1638QY", 1);
-            }
-            else {
-                _module->setDisplayToString(String("LIBRARY "), 1);
-            }
-            break;
+             _module->setDisplayToDecNumber(world.targetCounter, 0);
+             break;
         case 16384: //S16
             char s[9];
             sprintf(s, "Secs %03d", runningSecs % 999);
@@ -128,20 +123,12 @@ void display() {
 ////////////////////////////////////////////////////////////////////////////
 ISR(TIMER1_COMPA_vect) {
 
-//    if (!world.movementDone) {
-//        //runningSecs = elapTime();
-//        OCR1A = world.setDelay();   // delay between steps
-//        //TCNT1 = 0;
-//        world.generatePulse();      // generate pulse
-//    }
-
-    //if (!world.movementDone) {
     if (!world.movingDone()) {
 
-        //OCR1A = 65000;
         TCNT1 = DELAY_C0;           // for regular interval
 
-        OCR1A = world.setDelay();   // delay between steps
+        //OCR1A = world.setDelay();   // setting delay between steps
+        OCR1A = world.setDelay2();   // setting delay between steps
         TCNT1 = 0;
         world.generatePulse();      // generate pulse
     }
@@ -157,7 +144,7 @@ void setup() {
     world.addMotor(&Z_Axis);
     world.addMotor(&A_Axis);
     world.addMotor(&B_Axis);
-    world.addMotor(&C_Axis);
+    //world.addMotor(&C_Axis);
 
     // error checking
     if (world.motorIndex != MAX_AXIS) {
@@ -215,14 +202,16 @@ void loop() {
 //    world.moving(0,0,0,0,0,0, display);
 //    display();
 //    delay(1000);
-
+    world.setSpeed(20.0f);
     world.moving(16000,8000,4800,3200,1600,800, display);
     display();
     delay(1000);
 
+    world.setSpeed(20.0f);
     world.moving(32000,10000,9600,6400,3200,1600, display);
     display();
-    delay(1000);
+
+//    delay(1000);
 //
 //    world.moving(0,0,0,0,0,0, display);
 //    display();
@@ -237,7 +226,7 @@ void loop() {
 //    delay(1000);
 
     while (true) {
-        digitalWrite(13, HIGH);
+        //digitalWrite(13, HIGH);
         display();
         //module.setDisplayToDecNumber(TCNT1, 0);
         //module.setDisplayToDecNumber(ttt, 0);

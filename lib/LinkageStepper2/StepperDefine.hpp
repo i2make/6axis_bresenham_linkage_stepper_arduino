@@ -6,7 +6,7 @@
 #include <TM1638.h>
 #include <TM1638QYF.h>
 
-#define MAX_AXIS            6u
+#define MAX_AXIS            5u
 
 // setting 1: 8000, 200.0f
 #define DELAY_C0    600
