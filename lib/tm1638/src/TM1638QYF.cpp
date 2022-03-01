@@ -116,8 +116,6 @@ void TM1638QYF::setDisplayToDecNumber(unsigned long number, byte dots, boolean l
 
 	snprintf(values, displays + 1, leadingZeros ? "%08ld" : "%ld", number); // ignores display size
 
-	Serial.println(values);
-	
 	setDisplayToString(values, dots, 0, numberFont);
 }
 

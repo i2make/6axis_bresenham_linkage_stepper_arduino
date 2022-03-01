@@ -1,6 +1,5 @@
 
-#include "StepperDefine.hpp"
-#define DELAY_BETWEEN_PULSE         3
+#include "direction_pulse.hpp"
 
 /// X axis 1 stepping pulse generation
 void xPulse() {

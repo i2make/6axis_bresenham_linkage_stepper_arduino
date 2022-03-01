@@ -7,7 +7,7 @@
 ///////////////////////////////////////////////////
 /// constructor
 ///////////////////////////////////////////////////
-World::World(Motor* _motor) {
+World::World(Motor *_motor) {
     motor[0] = _motor;
     motorIndex = 1;
     minDelayValue = MIN_DELAY;
@@ -29,11 +29,10 @@ void World::setMaxLongDy() {
 }
 
 void
-World::bresenham(long _x2, long _y2, long _z2, long _a2, long _b2,
-                 long _c2) {
+World::bresenham(long _x2, long _y2, long _z2, long _a2, long _b2, long _c2) {
 
     ////////////////////////////////////////////////////////
-    /// initialaze
+    /// initialize
     ////////////////////////////////////////////////////////
     switch (MAX_AXIS) {
         case 6:
@@ -58,7 +57,7 @@ World::bresenham(long _x2, long _y2, long _z2, long _a2, long _b2,
         motor[i]->absDy = abs(motor[i]->dy);            // dy 절대값
     } // for
 
-    setMaxLongDy(); // fine max dy-value motor 최대값 모터를 찾음
+    setMaxLongDy(); // fine max dy-value motor (최대값 모터를 찾음)
 
     // bresenham parameter "over" setting
     for (unsigned short i = 0; i < MAX_AXIS; i++) {
@@ -67,22 +66,22 @@ World::bresenham(long _x2, long _y2, long _z2, long _a2, long _b2,
 
     setMotorDirection();    // set motor direction
 
-    TIMER1_INTERRUPTS_ON
+    TIMER1_INTERRUPTS_ON    // generating pulse
 
 } // bresenham
 
 void World::generatePulse() {
 
-    // maxDyMotor의 dir 증감 (기준 모터)
+    // Increase or decrease the dir of maxDyMotor (maxDyMotor의 dir을 증감 (기준 모터))
     motor[maxDyMotor]->currentPosition += motor[maxDyMotor]->dirValue;
 
     // generate pulse for maxDyMotor
     motor[maxDyMotor]->pulse();
 
-    // 모터 수 만큼 반복
+    // Repeat for the number of motors (모터 수 만큼 반복)
     for (unsigned short w = 0; w < MAX_AXIS; w++) {
 
-        if (w != maxDyMotor) {          // 최대 dy 모터는 스킵
+        if (w != maxDyMotor) {          // skip max dy motor (최대 dy 모터는 스킵)
 
             if (motor[w]->dy != 0) {
 
@@ -110,102 +109,110 @@ void World::setMotorDirection() {
 }
 
 ///////////////////////////////////////////////////////////////////////
-/// testing setDelay2
+/// Setting delay between steps (스텝간의 delay를 설정)
 ///////////////////////////////////////////////////////////////////////
 float World::setDelay2() {
 
     ///////////////////////////////////////////////////////////////////
-    /// pause 일시 정지
+    /// pause (일시 정지)
     ///////////////////////////////////////////////////////////////////
-    if (movingFlag & pause_msk) {           // pause flag on ?
+    if (BUTTON_PRESS_PAUSE) {           // pause flag on ?
 
+        // executed when the pause button is pressed and started
         // pause 버튼을 누른 상태로 시작하면 이 조건문이 실행됨
-        if ((movingFlag & acceleration_msk) == 0 &&     // 가속 아님
-            (movingFlag & constantSpeed_msk) == 0 &&    // 등속 아님
-            (movingFlag & deceleration_msk) == 0) {     // 감속 아님
+        if (NOT_ACCELERATING &&         // not accelerating (가속 아님)
+            NOT_CONSTANT_SPEED &&       // not constant speed (등속 아님)
+            NOT_DECELERATING) {         // not decelerating (감속 아님)
 
             TIMER1_INTERRUPTS_OFF
         }
 
+        // executed when the pause button is pressed during acceleration
         // 가속 중 pause 버튼을 누르면 이 조건문이 실행됨
-        if ((movingFlag & acceleration_msk) != 0 &&     // 가속
-            (movingFlag & constantSpeed_msk) == 0 &&    // 등속 아님
-            (movingFlag & deceleration_msk) == 0) {     // 감속 아님
+        if (ACCELERATING &&             // accelerating (가속중)
+            NOT_CONSTANT_SPEED &&       // not constant speed (등속 아님)
+            NOT_DECELERATING) {         // not decelerating (감속 아님)
 
-            accelNstep = stepCounter;
-            decelNstep = stepCounter;
+            accelNstep = stepCounter;   // 현재 진행된 스텝 수 -> 가속에 사용된 스텝 수
+            decelNstep = stepCounter;   // 현재 진행된 스텝 수 -> 감속에 사용될 스텝 수
         }
 
         // setting deceleration flag
-        movingFlag &= ~acceleration_msk;        // 가속 아님
-        movingFlag &= ~constantSpeed_msk;       // 등속 아님
-        movingFlag |= deceleration_msk;         // 감속
+        CLEAR_ACCELERATION_FLAG;         // set not accelerating (가속 아님 설정)
+        CLEAR_CONSTANT_SPEED_FLAG;       // set not constant speed (등속 아님 설정)
+        SET_DECELERATION_FLAG;           // set decelerating (감속중 설정)
     }
+
     ///////////////////////////////////////////////////////////////////
-    /// resume 재개
+    /// resume (재개)
     ///////////////////////////////////////////////////////////////////
-    if (movingFlag & resume_msk) {
+    if (BUTTON_PRESS_RESUME) {
 
         elapsedCounter += stepCounter;
         stepCounter = 0;
         accelNstep = 0;
         delayValue = DELAY_C0;
-        movingFlag &= ~resume_msk;
+        CLEAR_RESUME_FLAG;
 
         // setting starting flag
-        movingFlag &= ~acceleration_msk;    // 가속 아님
-        movingFlag &= ~constantSpeed_msk;   // 등속 아님
-        movingFlag &= ~deceleration_msk;    // 감속 아님
+        CLEAR_ACCELERATION_FLAG;     // clear not acceleration (가속 아님 설정)
+        CLEAR_CONSTANT_SPEED_FLAG;   // clear not constant speed (등속 아님 설정)
+        CLEAR_DECELERATION_FLAG;     // clear not deceleration (감속 아님 설정)
 
     }
 
     ///////////////////////////////////////////////////////////////////
-    /// start acceleration 가속 시작
+    /// stop -> acceleration (정지 -> 가속 시작)
     ///////////////////////////////////////////////////////////////////
-    if ((movingFlag & acceleration_msk) == 0 &&     // 가속 아님
-        (movingFlag & constantSpeed_msk) == 0 &&    // 등속 아님
-        (movingFlag & deceleration_msk) == 0) {     // 감속 아님
+    if (NOT_ACCELERATING &&     // not accelerating (가속 아님)
+        NOT_CONSTANT_SPEED &&   // not constant speed (등속 아님)
+        NOT_DECELERATING) {     // not decelerating (감속 아님)
 
-        digitalWrite(13, LOW);
-        targetCounter++;
-        stepCounter++;
+        totalMovedCounter++;        //
+        stepCounter++;          // add moved step
 
-        movingFlag |= acceleration_msk;     // acceleration flag on
-        return DELAY_C0;                    // initial delay value
+        SET_ACCELERATION_FLAG;       // acceleration flag on
+        return DELAY_C0;        // initial delay value
     }
 
     ///////////////////////////////////////////////////////////////////
-    /// during acceleration 가속 중
+    /// during acceleration (가속중)
     ///////////////////////////////////////////////////////////////////
-    if ((movingFlag & acceleration_msk) != 0 &&     // 가속
-        (movingFlag & constantSpeed_msk) == 0 &&    // 등속 아님
-        (movingFlag & deceleration_msk) == 0) {     // 감속 아님
+    if (ACCELERATING &&         // accelerating (가속중)
+        NOT_CONSTANT_SPEED &&   // not constant speed (등속 아님)
+        NOT_DECELERATING) {     // not decelerating (감속 아님)
 
-        calculateAccel(stepCounter);
-        targetCounter++;
-        stepCounter++;
+        calculateAccel(stepCounter);    // Calculate the delay value at the current position
+        totalMovedCounter++;        //
+        stepCounter++;          // add moved step
 
-        // exit condition: reached max speed 최대 속도에 도달 ///////////////
+        // exit condition: reached max speed (최대 속도에 도달) ///////////////
         if (delayValue < minDelayValue) {
 
             delayValue = minDelayValue;     // fix max speed
-            accelNstep = stepCounter;
-            decelNstep = stepCounter;
-            pauseDecelNstep = stepCounter;
-            movingFlag &= ~acceleration_msk;        // 가속 아님
-            movingFlag |= constantSpeed_msk;        // 등속
-            movingFlag &= ~deceleration_msk;        // 감속 아님
-            return delayValue;
+            accelNstep = stepCounter;       // Number of steps used for acceleration (가속에 사용된 스텝 수)
+            decelNstep = stepCounter;       // Number of steps to use for deceleration (감속에 사용할 스텝 수)
+            CLEAR_ACCELERATION_FLAG;        // 가속 아님
+            SET_CONSTANT_SPEED_FLAG;        // 등속
+            CLEAR_DECELERATION_FLAG;        // 감속 아님
+            return delayValue;      // delay value between steps
         }
 
-        // TODO: test
-        // exit condition: reached half step 최대 속도에 도달 전 감속 ////////
+        // exit condition: Decelerate before reaching maximum speed (최대 속도에 도달 전 감속) ////////
+        //      ---------------   <-- max speed (constant speed)
+        //     /               \
+        //    /                 \
+        //   /\ <-- decelerating \
+        //  /  \                  \
+        // /    \                  \
+        // ------+---------------------
+        // ----->|
+        //
         if (stepCounter >
             (motor[maxDyMotor]->absDy - elapsedCounter) / 2) {
 
             accelNstep = stepCounter;
             decelNstep = stepCounter;
-            pauseDecelNstep = stepCounter;
             movingFlag &= ~acceleration_msk;        // 가속 아님
             movingFlag &= ~constantSpeed_msk;       // 등속 아님
             movingFlag |= deceleration_msk;         // 감속
@@ -215,46 +222,45 @@ float World::setDelay2() {
     }
 
     ///////////////////////////////////////////////////////////////////
-    /// constant speed 등속
+    /// constant speed (등속)
     ///////////////////////////////////////////////////////////////////
-    if ((movingFlag & acceleration_msk) == 0 &&     // 가속 아님
-        (movingFlag & constantSpeed_msk) != 0 &&    // 등속
-        (movingFlag & deceleration_msk) == 0) {     // 감속 아님
+    if (NOT_ACCELERATING &&     // not accelerating (가속 아님)
+        CONSTANT_SPEED &&       // constant speed (등속중)
+        NOT_DECELERATING) {     // not decelerating (감속 아님)
 
-        targetCounter++;
-        stepCounter++;
+        totalMovedCounter++;        //
+        stepCounter++;          // add moved step
 
-        // TODO: if statement , accelNstep
         // stop condition: targetCounter의 감속
-        if (targetCounter > motor[maxDyMotor]->absDy - accelNstep) {
-            movingFlag &= ~acceleration_msk;    // 가속 아님
-            movingFlag &= ~constantSpeed_msk;   // 등속 아님
-            movingFlag |= deceleration_msk;     // 감속
+        if (totalMovedCounter > motor[maxDyMotor]->absDy - accelNstep) {
+            CLEAR_ACCELERATION_FLAG;    // 가속 아님
+            CLEAR_CONSTANT_SPEED_FLAG;  // 등속 아님
+            SET_DECELERATION_FLAG;      // 감속중
         }
         return delayValue;
     }
 
     ///////////////////////////////////////////////////////////////////
-    /// deceleration 감속
+    /// decelerating (감속중)
     ///////////////////////////////////////////////////////////////////
-    if ((movingFlag & acceleration_msk) == 0 &&     // 가속 아님
-        (movingFlag & constantSpeed_msk) == 0 &&    // 등속 아님
-        (movingFlag & deceleration_msk) != 0) {     // 감속
+    if (NOT_ACCELERATING &&     // not acceleration (가속 아님)
+        NOT_CONSTANT_SPEED &&   // not constant speed (등속 아님)
+        DECELERATING) {         // deceleration (감속)
 
-        decelNstep--;
-        targetCounter++;
-        stepCounter++;
+        decelNstep--;           // 감속용 스텝 수를 줄임
+        totalMovedCounter++;        //
+        stepCounter++;          // add moved step
 
-        // stop condition: end 끝에 도달 정지
-        if (targetCounter == motor[maxDyMotor]->absDy) {
-            movingFlag &= ~acceleration_msk;    // 가속 아님
-            movingFlag &= ~constantSpeed_msk;   // 등속 아님
-            movingFlag &= ~deceleration_msk;    // 감속 아님
-            movingFlag |= movementDone_msk;     // movementDone flag on
+        // stop condition: reached target position (원하는 위치에 도달하면 정지)
+        if (totalMovedCounter == motor[maxDyMotor]->absDy) {
+            CLEAR_ACCELERATION_FLAG;    // not acceleration (가속 아님)
+            CLEAR_CONSTANT_SPEED_FLAG;  // not constant speed (등속 아님)
+            CLEAR_DECELERATION_FLAG;    // not deceleration (감속 아님)
+            SET_MOVING_DONE_FLAG;       // movementDone flag on
             return delayValue;
         } // stop condition
 
-        // stop condition: pause 일시 정지로 감속
+        // stop condition: pause (일시 정지로 감속)
         if (decelNstep == 0) {
             TIMER1_INTERRUPTS_OFF
             return delayValue;
@@ -264,162 +270,27 @@ float World::setDelay2() {
 
         return delayValue;
     }
-
 }
 
-/////////////////////////////////////////////////////////////////////////////
-/// 가속을 시작 : delayValue 계산
-/////////////////////////////////////////////////////////////////////////////
-
-/// start acceleration ?
-/// during acceleration?
-/// yes: acceleration   ///  no: deceleration?
-/// yes: deceleration
-///  no: constant speed moving
-float World::setDelay() {
-
-    // 최대 속도에 도달하거나
-    // 움직일 거리가 짧아서 가속이 끝나기 전에 감속이 시작되면
-    // acelNstep 값과 decelNstep 값을 설정한다
-
-
-
-
-    ////////////////////////////////////////////////////////////////////////////
-    /// start acceleration 가속 시작
-    ////////////////////////////////////////////////////////////////////////////
-    if (stepCounter == 0) {
-        stepCounter++;
-        return DELAY_C0;                    // initial delay value
-    }
-
-
-    ////////////////////////////////////////////////////////////////////////////
-    /// During acceleration 가속 중
-    ////////////////////////////////////////////////////////////////////////////
-    if (accelNstep == 0) {
-
-
-
-        // calculate delay value for n step
-        // delayValue - (2 * delayValue) / (4 * (float) stepCounter + 1);
-        calculateAccel(stepCounter);
-
-        stepCounter++;
-
-        // acceleration exit condition 최대 속도에 도달하면
-        if (delayValue < minDelayValue) {
-            delayValue = minDelayValue;     // fix max speed
-            accelNstep = stepCounter;
-            decelNstep = stepCounter;
-            pauseDecelNstep = stepCounter;
-        }
-
-        // acceleration exit condition 가속이 끝나기 전에 감속을 시작하면
-        if (stepCounter > motor[maxDyMotor]->absDy / 2) {
-            accelNstep = stepCounter;
-            decelNstep = stepCounter;
-            pauseDecelNstep = stepCounter;
-        }
-        return delayValue;
-    }
-
-    else {
-        ////////////////////////////////////////////////////////////////////////
-        /// starting deceleration 감속
-        ////////////////////////////////////////////////////////////////////////
-        if (stepCounter > motor[maxDyMotor]->absDy - accelNstep) {
-            decelNstep--;
-            stepCounter++;
-
-            // stop condition
-            if (stepCounter == motor[maxDyMotor]->absDy) {
-                movingFlag |= movementDone_msk;     // movementDone flag on
-                return delayValue;
-            } // stop condition
-
-            // calculate delay value for n step
-            calculateDecel(decelNstep);
-
-            return delayValue;
-        } //감속
-
-
-        else {
-            ////////////////////////////////////////////////////////////////////////
-            /// constant speed 등속
-            ////////////////////////////////////////////////////////////////////////
-            stepCounter++;
-
-//////////////////////////////////////////////////////////////////////////////
-            // pause 일시 정지
-            if (movingFlag & pause_msk) {           // pause flag on ?
-
-                if (pauseDecelNstep == 0) {
-                    TIMER1_INTERRUPTS_OFF
-                    //movingFlag &= ~pause_msk;       // pause flag off
-                    //movingFlag |= resumeReady_msk;  // resumeReady flag on
-                    pauseDecelNstep = decelNstep;   // set deceleration n step
-                }
-
-                // calculate delay value for n step
-                // (delayValue * float(4 * decelNstep + 1)) /
-                //                             float(4 * decelNstep + 1 - 2);
-                calculateDecel(decelNstep);
-
-                pauseDecelNstep--;
-            }
-
-////////////////////////////////////////////////////////////////////////////////
-            // resume 재개
-            if (movingFlag & resume_msk) {
-
-                // start acceleration 가속 시작
-                if (resumeAccelNstep == 0) {
-                    resumeAccelNstep++;
-                    delayValue = DELAY_C0;
-                    return DELAY_C0;
-                }
-                // delayValue - (2 * delayValue) / (4 * (float) resumeAccelNstep + 1);
-                calculateAccel(resumeAccelNstep);
-
-                // reached max speed 최대 속도에 도달
-                if (delayValue < minDelayValue) {
-                    delayValue = minDelayValue;     // min
-                    movingFlag &= ~resume_msk;
-                    //movingFlag &= ~resumeReady_msk;
-                    resumeAccelNstep = 0;
-
-                    return delayValue;
-                }
-                resumeAccelNstep++;
-            }
-
-            return delayValue;
-        } //else 등속
-    }
-}
-
-
-void World::moving(long _x, long _y, long _z, long _a, long _b, long _c,
-                   void(func)()) {
+void World::moving(long _x, long _y, long _z, long _a, long _b, long _c, void(func)()) {
 
     movingFlag &= ~movementDone_msk;        // start moving
-    targetCounter = 0;                      // number of total step
+    totalMovedCounter = 0;                      // number of total step
     stepCounter = 0;                        // restart counter for resume
     elapsedCounter = 0;                     // summing elapsed step
     accelNstep = 0;
     delayValue = DELAY_C0;
 
-    bresenham(_x, _y, _z, _a, _b, _c);
+    bresenham(_x, _y, _z, _a, _b, _c); // start moving
 
     while (!movingDone()) {
         func();
     }
+    func();
     TIMER1_INTERRUPTS_OFF
 }
 
-bool World::addMotor(Motor* _motor) {
+bool World::addMotor(Motor *_motor) {
     motor[motorIndex] = _motor;
     motorIndex++;
     return motorIndex <= MAX_AXIS;
@@ -431,18 +302,23 @@ void World::pauseMoving() {
 }
 
 void World::resumeMoving() {
-    // activate after pause
-    //if (movingFlag & resumeReady_msk) {
-    //digitalWrite(13, HIGH);
     if (movingFlag & pause_msk) {
         TIMER1_INTERRUPTS_ON
-        resumeAccelNstep = 0;       // reset resume acceleration step counter
         movingFlag &= ~pause_msk;       // pause flag off
         movingFlag |= resume_msk;       // resume flag on
     }
 }
 
-bool World::movingDone() {
+void World::changeSpeed() {
+
+}
+
+float World::readSpeedController() {
+    speedPercent = int(analogRead(SPEED_CONTROL) / 100.f) / 10.f;
+    return speedPercent;
+}
+
+bool World::movingDone() const {
     return movingFlag & movementDone_msk;
 }
 
@@ -451,4 +327,8 @@ void World::setSpeed(float speed) {
         minDelayValue = speed;
     else
         minDelayValue = MIN_DELAY;
+}
+
+float World::getSpeed() {
+    return minDelayValue;
 }
