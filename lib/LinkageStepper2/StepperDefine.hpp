@@ -3,9 +3,14 @@
 #define STEPPER_MOTOR_STEPPERDEFINE_HPP
 
 #define USING_TM1638QYF
-#define SERIAL_OUTPUT
+
+//#define SERIAL_OUTPUT
+
 //#define PAUSE_RESUME
-#define SERIAL_INPUT
+
+//#define SERIAL_INPUT
+
+#define ENABLE_SPEED_CONTROL
 
 #include <Arduino.h>
 
@@ -14,10 +19,31 @@
 #include <TM1638QYF.h>
 #endif
 
-#define MAX_AXIS            5u  // number of axis (1 ~ 6)
+#define MAX_AXIS            5u          // number of axis (1 ~ 6)
 
-#define DELAY_C0    1600         // maximum delay between steps
-#define MIN_DELAY   32.0f       // minimum delay between steps (현 최대 속도 32)
+//      : MIN_DELAY : interval :      ms
+// -------------------------------------
+// 100% :      32.0 :        0 : 2705 ms
+//  90% :      37.0 :        5 : 2735 ms
+//  80% :      42.0 :        5 : 2712 ms
+//  70% :      49.5 :        7 : 2713 ms
+//  60% :      58.0 :        9 : 2703 ms
+//  50% :      71.0 :       13 : 2708 ms
+//  40% :      90.0 :       19 : 2701 ms
+//  30% :     122.0 :       32 : 2700 ms
+//  20% :     187.0 :       65 : 2713 ms
+//  10% :     378.0 :      191 : 2703 ms
+#define MIN_DELAY           32.0f       // minimum delay between steps (현 최대 속도 32)
+#define DELAY_90            37.0f
+#define DELAY_80            42.0f
+#define DELAY_70            49.0f
+#define DELAY_60            58.0f
+#define DELAY_50            71.0f
+#define DELAY_40            90.0f
+#define DELAY_30           122.0f
+#define DELAY_20           187.0f
+#define DELAY_10           378.0f
+#define DELAY_C0          1600.0f       // maximum delay between steps
 
 #define TIMER1_INTERRUPTS_ON    TIMSK1 |=  (1u << (unsigned)OCIE1A);
 #define TIMER1_INTERRUPTS_OFF   TIMSK1 &= ~(1u << (unsigned)OCIE1A);

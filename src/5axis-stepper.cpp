@@ -32,8 +32,8 @@ World world(&X_Axis);
 
 /////////////////////////////////////////////////////////////////////////////
 /// ISR
-/// clk/64: 21 ~ 23 tick
-/// clk/ 8: 200 tick
+/// clk/64: 32 tick
+///
 /// TCNT becomes 0 when entering ISR (ISR에 진입할 때 TCNT는 0이 된다)
 ////////////////////////////////////////////////////////////////////////////
 
@@ -43,6 +43,7 @@ ISR(TIMER1_COMPA_vect) {
         OCR1A = world.setDelay2();  // setting delay between steps
         //TCNT1 = 0;
         world.generatePulse();      // generate pulse
+        //world.minDelayValue = TCNT1 + 1;
     }
 }
 
@@ -120,11 +121,12 @@ void setup() {
 ////////////////////////////////////////////////////////////////////////////
 
 void loop() {
-    world.moving(8000, 24000, 16000, 32000, 32000, 0, display);
-    //display();
-    delay(1000);
 
-    world.moving(0, 0, 0, 0, 0, 0, display);
+    world.moving(2000, 4000, 8000, 16000, 32000, 0, display);
+    //display();
+    //delay(1000);
+
+    //world.moving(0, 0, 0, 0, 0, 0, display);
     //display();
     while (true);
 }
@@ -164,17 +166,9 @@ void display() {
 #endif
 
     /// Speed control
-//    if (previousSpeedControl != 0.9f) {
-//        if (world.readSpeedController() == .9f) {
-//            previousSpeedControl = 0.9f;
-//            world.delayValue = world.delayValue + world.delayValue * (1 - world.speedPercent);
-//        }
-//    }
-//
-//    if (previousSpeedControl != world.readSpeedController()) {
-//        previousSpeedControl = world.speedPercent;
-//        world.delayValue = world.delayValue + world.delayValue * (1 - world.speedPercent);
-//    }
+#ifdef ENABLE_SPEED_CONTROL
+        world.readSpeedController();
+#endif
 
 #ifdef USING_TM1638QYF
     update(&module, &mode);
@@ -197,11 +191,15 @@ void update(TM1638QYF *_module, word *_mode) {
             //_module->setDisplayToDecNumber(world.stepCounter, 0);
             //_module->setDisplayToDecNumber(OCR1A, 0);
             //_module->setDisplayToDecNumber(TCNT1, 0);
-            //_module->setDisplayToDecNumber(ttt, 0);
             //_module->setDisplayToDecNumber(world.motor[0]->absDy, 0);
-            //_module->setDisplayToString(String(world.delayValue));
-            _module->setDisplayToString(String(world.speedPercent));
-            //_module->setDisplayToDecNumber(world.motor[0]->currentPosition, 0);
+            //_module->setDisplayToString(String(world.accelNstep));
+            //_module->setDisplayToString(String(world.minDelayValue));
+            //_module->setDisplayToString(String(world.previousSpeedPercent));
+            //_module->setDisplayToString(String(world.previousMinDelayValue));
+            _module->setDisplayToString(String(world.delayValue));
+            //_module->setDisplayToString(String(world.calculatedDelayValue[9]));
+            //_module->setDisplayToString(String(world.speedPercent));
+            //_module->setDisplayToDecNumber(world.motor[4]->currentPosition, 0);
             //_module->setDisplayToDecNumber(world.delayValuePercent, 0);
             //_module->setDisplayToDecNumber(test, 0);
             break;
