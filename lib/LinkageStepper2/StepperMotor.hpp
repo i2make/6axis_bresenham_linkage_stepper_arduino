@@ -2,7 +2,8 @@
 #ifndef STEPPER_MOTOR_STEPPERMOTOR_HPP
 #define STEPPER_MOTOR_STEPPERMOTOR_HPP
 
-#include <StepperDefine.hpp>
+#include "StepperDefine.hpp"
+#include "direction_pulse.hpp"
 
 struct Motor
 {

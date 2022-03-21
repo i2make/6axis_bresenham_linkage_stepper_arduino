@@ -1,34 +1,21 @@
-//
-// Created by KJH on 2021-03-19.
-//
 
 #include "direction_pulse.hpp"
 #include "StepperMotorWorld.hpp"
 
-void display();
+#ifdef USING_TM1638QYF
 
 void update(TM1638QYF *_module, word *_mode);
 
-#ifdef USING_TM1638QYF
 TM1638QYF module(14, 15, 16);
 unsigned int mode;
 unsigned int previousButtons;
 #endif
 
-float speedControl;
-float previousSpeedControl;
-int test;
-
-/// Create Motor Instance
-Motor X_Axis(xDirection, xPulse);
-Motor Y_Axis(yDirection, yPulse);
-Motor Z_Axis(zDirection, zPulse);
-Motor A_Axis(aDirection, aPulse);
-Motor B_Axis(bDirection, bPulse);
-Motor C_Axis(cDirection, cPulse);
+//unsigned long testingElapsedTime = 65535;
+//unsigned long previousElapsedTime;
 
 /// World
-World world(&X_Axis);
+World world;
 
 /////////////////////////////////////////////////////////////////////////////
 /// ISR
@@ -38,13 +25,14 @@ World world(&X_Axis);
 ////////////////////////////////////////////////////////////////////////////
 
 ISR(TIMER1_COMPA_vect) {
-    if (!world.movingDone()) {
-        //TCNT1 = DELAY_C0;           // for regular interval
-        OCR1A = world.setDelay2();  // setting delay between steps
-        //TCNT1 = 0;
-        world.generatePulse();      // generate pulse
-        //world.minDelayValue = TCNT1 + 1;
-    }
+    // TODO:
+    TCNT1 = DELAY_C0;
+    OCR1A = world.setDelay2(); // min 6 tick
+    world.generatePulse(); // min 4 tick
+    TCNT1 = 9;
+
+//    OCR1A = world.setDelay2();
+//    world.generatePulse();      // generate pulse
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -59,37 +47,6 @@ void setup() {
     module.setupDisplay(true, 7);
     mode = 0;
 #endif
-
-    /// adding motor
-    switch (MAX_AXIS) {
-        case 1:
-            break;
-        case 2:
-            world.addMotor(&Y_Axis);
-            break;
-        case 3:
-            world.addMotor(&Y_Axis);
-            world.addMotor(&Z_Axis);
-            break;
-        case 4:
-            world.addMotor(&Y_Axis);
-            world.addMotor(&Z_Axis);
-            world.addMotor(&A_Axis);
-            break;
-        case 5:
-            world.addMotor(&Y_Axis);
-            world.addMotor(&Z_Axis);
-            world.addMotor(&A_Axis);
-            world.addMotor(&B_Axis);
-            break;
-        case 6:
-            world.addMotor(&Y_Axis);
-            world.addMotor(&Z_Axis);
-            world.addMotor(&A_Axis);
-            world.addMotor(&B_Axis);
-            world.addMotor(&C_Axis);
-            break;
-    }
 
     /// pinmode setting
     pinMode(X_DIR_PIN, OUTPUT);
@@ -121,14 +78,23 @@ void setup() {
 ////////////////////////////////////////////////////////////////////////////
 
 void loop() {
+    world.moving(6400, 0, 0, 0, 0);
+    delay(100);
+    world.moving(6400, 6400, 0, 0, 0);
+    delay(100);
+    world.moving(6400, 6400, 6400, 0, 0);
+    delay(100);
+    world.moving(6400, 6400, 6400, 6400, 0);
+    delay(100);
+    world.moving(6400, 6400, 6400, 6400, 6400, 6400);
+    delay(100);
+    world.moving(0, 0, 0, 0, 0);
+    delay(100);
 
-    world.moving(2000, 4000, 8000, 16000, 32000, 0, display);
-    //display();
-    //delay(1000);
+    world.moving(3200, 6400, 9600, 16000, 32000);
+    world.moving(0, 0, 0, 0, 0, 0);
 
-    //world.moving(0, 0, 0, 0, 0, 0, display);
-    //display();
-    while (true);
+    while (true) ;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -150,30 +116,19 @@ void display() {
 #endif
 
 #ifdef PAUSE_RESUME
-    if (!digitalRead(PAUSE_BUTTON)) {
-        world.pauseMoving();
-#ifdef SERIAL_OUTPUT
-        Serial.println("PAUSE...");
-#endif
-    }
-
-    if (!digitalRead(RESUME_BUTTON)) {
-        world.resumeMoving();
-#ifdef SERIAL_OUTPUT
-        Serial.println("RESUME...");
-#endif
-    }
+    world.inputIo->readPauseButton();
+    world.inputIo->readResumeButton();
 #endif
 
     /// Speed control
 #ifdef ENABLE_SPEED_CONTROL
-        world.readSpeedController();
+    world.inputIo->readSpeedController();
 #endif
 
 #ifdef USING_TM1638QYF
     update(&module, &mode);
 #endif
-}
+}  //display
 
 /// using TM1638QYF board
 #ifdef USING_TM1638QYF
@@ -192,16 +147,15 @@ void update(TM1638QYF *_module, word *_mode) {
             //_module->setDisplayToDecNumber(OCR1A, 0);
             //_module->setDisplayToDecNumber(TCNT1, 0);
             //_module->setDisplayToDecNumber(world.motor[0]->absDy, 0);
+            //_module->setDisplayToString(String(testingElapsedTime));
             //_module->setDisplayToString(String(world.accelNstep));
             //_module->setDisplayToString(String(world.minDelayValue));
             //_module->setDisplayToString(String(world.previousSpeedPercent));
             //_module->setDisplayToString(String(world.previousMinDelayValue));
-            _module->setDisplayToString(String(world.delayValue));
+            //_module->setDisplayToString(String(world.delayValue));
             //_module->setDisplayToString(String(world.calculatedDelayValue[9]));
             //_module->setDisplayToString(String(world.speedPercent));
-            //_module->setDisplayToDecNumber(world.motor[4]->currentPosition, 0);
-            //_module->setDisplayToDecNumber(world.delayValuePercent, 0);
-            //_module->setDisplayToDecNumber(test, 0);
+            _module->setDisplayToDecNumber(world.motor[4]->currentPosition, 0);
             break;
         case 1: //S2
             _module->setDisplayToDecNumber(world.motor[1]->currentPosition, 0);

@@ -1,17 +1,50 @@
-//
-// Created by KJH on 2021-03-19.
-//
 
 #include <StepperMotorWorld.hpp>
 
 ///////////////////////////////////////////////////
 /// constructor
 ///////////////////////////////////////////////////
-World::World(Motor *_motor) {
-    motor[0] = _motor;
-    motorIndex = 1;
+World::World() {
     minDelayValue = MIN_DELAY;
     movingFlag = 0;
+
+    // create instance
+    switch (MAX_AXIS) {
+        case 1:
+            motor[0] = new Motor(xDirection, xPulse);
+            break;
+        case 2:
+            motor[0] = new Motor(xDirection, xPulse);
+            motor[1] = new Motor(yDirection, yPulse);
+            break;
+        case 3:
+            motor[0] = new Motor(xDirection, xPulse);
+            motor[1] = new Motor(yDirection, yPulse);
+            motor[2] = new Motor(zDirection, zPulse);
+            break;
+        case 4:
+            motor[0] = new Motor(xDirection, xPulse);
+            motor[1] = new Motor(yDirection, yPulse);
+            motor[2] = new Motor(zDirection, zPulse);
+            motor[3] = new Motor(aDirection, aPulse);
+            break;
+        case 5:
+            motor[0] = new Motor(xDirection, xPulse);
+            motor[1] = new Motor(yDirection, yPulse);
+            motor[2] = new Motor(zDirection, zPulse);
+            motor[3] = new Motor(aDirection, aPulse);
+            motor[4] = new Motor(bDirection, bPulse);
+            break;
+        case 6:
+            motor[0] = new Motor(xDirection, xPulse);
+            motor[1] = new Motor(yDirection, yPulse);
+            motor[2] = new Motor(zDirection, zPulse);
+            motor[3] = new Motor(aDirection, aPulse);
+            motor[4] = new Motor(bDirection, bPulse);
+            motor[5] = new Motor(cDirection, cPulse);
+    }
+
+    inputIo = new InputIO();
 }
 
 ///////////////////////////////////////////////////
@@ -28,8 +61,7 @@ void World::setMaxLongDy() {
     }
 }
 
-void
-World::bresenham(long _x2, long _y2, long _z2, long _a2, long _b2, long _c2) {
+void World::bresenham(long _x2, long _y2, long _z2, long _a2, long _b2, long _c2) {
 
     ////////////////////////////////////////////////////////
     /// initialize
@@ -157,8 +189,8 @@ float World::setDelay2() {
     ///////////////////////////////////////////////////////////////////
     /// change speed (속도 변경)
     ///////////////////////////////////////////////////////////////////
-    if (CONSTANT_SPEED) {
-        if (CHANGE_SPEED) {
+    if (CHANGE_SPEED) {
+        if (CONSTANT_SPEED) { // 등속일 때만 속도 변경
 
             //
             //                -------------> accelerating
@@ -182,7 +214,6 @@ float World::setDelay2() {
             CLEAR_CHANGE_SPEED_FLAG;    // end of speed control
         }
     }
-
 
 
     /////////////////////////////////////////////////////////////////////////////////////////////
@@ -303,7 +334,7 @@ float World::setDelay2() {
         totalMovedCounter++;    // add total moved counter
 
         if (delayValue > minDelayValue) {
-            accelNstep = accelNstep - (previousDecelNstep - decelNstep); // Number of steps used for acceleration (가속에 사용된 스텝 수)
+            accelNstep = (accelNstep - (previousDecelNstep - decelNstep)) + 1; // Number of steps used for acceleration (가속에 사용된 스텝 수)
             decelNstep = accelNstep;       // Number of steps to use for deceleration (정지 감속에 사용할 스텝 수를 update)
             delayValue = minDelayValue;
             SET_CONSTANT_SPEED_STATUS       // change constant speed status (등속으로 전환)
@@ -318,7 +349,7 @@ float World::setDelay2() {
 void World::moving(long _x, long _y, long _z, long _a, long _b, long _c, void(func)()) {
 
 #ifdef ENABLE_SPEED_CONTROL
-    firstReadSpeedController();
+    inputIo->firstReadSpeedController();
 #endif
 
     SET_STOP_STATUS
@@ -339,10 +370,28 @@ void World::moving(long _x, long _y, long _z, long _a, long _b, long _c, void(fu
     TIMER1_INTERRUPTS_OFF
 }
 
-bool World::addMotor(Motor *_motor) {
-    motor[motorIndex] = _motor;
-    motorIndex++;
-    return motorIndex <= MAX_AXIS;
+void World::moving(long _x, long _y, long _z, long _a, long _b, long _c) {
+    moving(_x, _y, _z, _a, _b, _c, display);
+}
+
+void World::moving(long _x, long _y, long _z, long _a, long _b) {
+    moving(_x, _y, _z, _a, _b, 0, display);
+}
+
+void World::moving(long _x, long _y, long _z, long _a) {
+    moving(_x, _y, _z, _a, 0, 0, display);
+}
+
+void World::moving(long _x, long _y, long _z) {
+    moving(_x, _y, _z, 0, 0, 0, display);
+}
+
+void World::moving(long _x, long _y) {
+    moving(_x, _y, 0, 0, 0, 0, display);
+}
+
+void World::moving(long _x) {
+    moving(_x, 0, 0, 0, 0, 0, display);
 }
 
 void World::pauseMoving() {
@@ -351,7 +400,7 @@ void World::pauseMoving() {
 }
 
 void World::resumeMoving() {
-    if (movingFlag & pause_msk) {
+    if (BUTTON_PRESS_PAUSE) {
         TIMER1_INTERRUPTS_ON
         CLEAR_PAUSE_FLAG;       // pause flag off
         SET_RESUME_FLAG;        // resume flag on
@@ -363,155 +412,166 @@ void World::changeSpeed() {
     SET_CHANGE_SPEED_FLAG;
 }
 
-void World::readSpeedController() {
+bool World::movingDone() const {
+    return MOVE_DONE_FLAG;
+}
+
+////////////////////////////////////////////////////////////////////////
+/// InputIO
+////////////////////////////////////////////////////////////////////////
+
+void InputIO::readSpeedController() {
     int sensorRead = int(analogRead(SPEED_CONTROL) / 10.f);
     switch (sensorRead) {
         case 99 ... 102:
             if (previousSpeedPercent != 100) {
                 previousSpeedPercent = 100;
-                minDelayValue = MIN_DELAY;
-                changeSpeed();
+                world.minDelayValue = MIN_DELAY;
+                world.changeSpeed();
             }
             break;
         case 89 ... 91:
             if (previousSpeedPercent != 90) {
                 previousSpeedPercent = 90;
-                minDelayValue = DELAY_90;
-                changeSpeed();
+                world.minDelayValue = DELAY_90;
+                world.changeSpeed();
             }
             break;
         case 79 ... 81:
             if (previousSpeedPercent != 80) {
                 previousSpeedPercent = 80;
-                minDelayValue = DELAY_80;
-                changeSpeed();
+                world.minDelayValue = DELAY_80;
+                world.changeSpeed();
             }
             break;
         case 69 ... 71:
             if (previousSpeedPercent != 70) {
                 previousSpeedPercent = 70;
-                minDelayValue = DELAY_70;
-                changeSpeed();
+                world.minDelayValue = DELAY_70;
+                world.changeSpeed();
             }
             break;
         case 59 ... 61:
             if (previousSpeedPercent != 60) {
                 previousSpeedPercent = 60;
-                minDelayValue = DELAY_60;
-                changeSpeed();
+                world.minDelayValue = DELAY_60;
+                world.changeSpeed();
             }
             break;
         case 49 ... 51:
             if (previousSpeedPercent != 50) {
                 previousSpeedPercent = 50;
-                minDelayValue = DELAY_50;
-                changeSpeed();
+                world.minDelayValue = DELAY_50;
+                world.changeSpeed();
             }
             break;
         case 39 ... 41:
             if (previousSpeedPercent != 40) {
                 previousSpeedPercent = 40;
-                minDelayValue = DELAY_40;
-                changeSpeed();
+                world.minDelayValue = DELAY_40;
+                world.changeSpeed();
             }
             break;
         case 29 ... 31:
             if (previousSpeedPercent != 30) {
                 previousSpeedPercent = 30;
-                minDelayValue = DELAY_30;
-                changeSpeed();
+                world.minDelayValue = DELAY_30;
+                world.changeSpeed();
             }
             break;
         case 19 ... 21:
             if (previousSpeedPercent != 20) {
                 previousSpeedPercent = 20;
-                minDelayValue = DELAY_20;
-                changeSpeed();
+                world.minDelayValue = DELAY_20;
+                world.changeSpeed();
             }
             break;
         case 9 ... 11:
             if (previousSpeedPercent != 10) {
                 if (previousSpeedPercent == 0) {
                     previousSpeedPercent = 10;
-                    minDelayValue = DELAY_10;
-                    resumeMoving();
+                    world.minDelayValue = DELAY_10;
+                    world.resumeMoving();
                 } else {
                     previousSpeedPercent = 10;
-                    minDelayValue = DELAY_10;
-                    changeSpeed();
+                    world.minDelayValue = DELAY_10;
+                    world.changeSpeed();
                 }
             }
             break;
         case 0 ... 2:
             previousSpeedPercent = 0;
-            minDelayValue = DELAY_C0;
-            pauseMoving();
+            world.minDelayValue = DELAY_C0;
+            world.pauseMoving();
             break;
     }
 }
 
-void World::firstReadSpeedController() {
+void InputIO::firstReadSpeedController() {
     int sensorRead = int(analogRead(SPEED_CONTROL) / 10.f);
     switch (sensorRead) {
         case 96 ... 103:
             previousSpeedPercent = 100;
-            minDelayValue = MIN_DELAY;
+            world.minDelayValue = MIN_DELAY;
             break;
         case 86 ... 95:
             previousSpeedPercent = 90;
-            minDelayValue = DELAY_90;
+            world.minDelayValue = DELAY_90;
             break;
         case 76 ... 85:
             previousSpeedPercent = 80;
-            minDelayValue = DELAY_80;
+            world.minDelayValue = DELAY_80;
             break;
         case 66 ... 75:
             previousSpeedPercent = 70;
-            minDelayValue = DELAY_70;
+            world.minDelayValue = DELAY_70;
             break;
         case 56 ... 65:
             previousSpeedPercent = 60;
-            minDelayValue = DELAY_60;
+            world.minDelayValue = DELAY_60;
             break;
         case 46 ... 55:
             previousSpeedPercent = 50;
-            minDelayValue = DELAY_50;
+            world.minDelayValue = DELAY_50;
             break;
         case 36 ... 45:
             previousSpeedPercent = 40;
-            minDelayValue = DELAY_40;
+            world.minDelayValue = DELAY_40;
             break;
         case 26 ... 35:
             previousSpeedPercent = 30;
-            minDelayValue = DELAY_30;
+            world.minDelayValue = DELAY_30;
             break;
         case 16 ... 25:
             previousSpeedPercent = 20;
-            minDelayValue = DELAY_20;
+            world.minDelayValue = DELAY_20;
             break;
         case 6 ... 15:
             previousSpeedPercent = 10;
-            minDelayValue = DELAY_10;
+            world.minDelayValue = DELAY_10;
             break;
         case 0 ... 5:
             previousSpeedPercent = 0;
-            minDelayValue = DELAY_C0;
+            world.minDelayValue = DELAY_C0;
             break;
     }
-    SET_FIRST_SPEED_CONTROL_SENSOR_READ_FLAG;
+    world.SET_FIRST_SPEED_CONTROL_SENSOR_READ_FLAG;
 }
 
-bool World::movingDone() const {
-    return MOVE_DONE_FLAG;
+void InputIO::readPauseButton() {
+    if (!digitalRead(PAUSE_BUTTON)) {
+        world.pauseMoving();
+#ifdef SERIAL_OUTPUT
+        Serial.println("PAUSE...");
+#endif
+    }
 }
 
-void World::setSpeed(float speed) {
-    if (speed > MIN_DELAY)
-        minDelayValue = speed;
-    else
-        minDelayValue = MIN_DELAY;
-}
-
-float World::getSpeed() {
-    return minDelayValue;
+void InputIO::readResumeButton() {
+    if (!digitalRead(RESUME_BUTTON)) {
+        world.resumeMoving();
+#ifdef SERIAL_OUTPUT
+        Serial.println("RESUME...");
+#endif
+    }
 }

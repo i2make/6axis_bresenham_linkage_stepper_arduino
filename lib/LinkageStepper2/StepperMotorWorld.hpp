@@ -68,15 +68,28 @@
 #define SET_DECELERATING_STATUS                 CLEAR_ACCELERATION_FLAG; CLEAR_CONSTANT_SPEED_FLAG;   SET_DECELERATION_FLAG;
 #define SET_CHANGE_SPEED_DECELERATING_STATUS    CLEAR_ACCELERATION_FLAG;   SET_CONSTANT_SPEED_FLAG;   SET_DECELERATION_FLAG;
 
+class InputIO {
+public:
+    unsigned short previousSpeedPercent;    // previous controlled speed percent
+
+    void readSpeedController();
+
+    void firstReadSpeedController();
+
+    void readPauseButton();
+
+    void readResumeButton();
+};
+
 struct World {
 /// method ///////////////////////////////////////////////////////////
 public:
 
-    explicit World(Motor *_motor);          // constructor
+    explicit World();          // constructor
 
     Motor *motor[MAX_AXIS];                 // number of motor
 
-    bool addMotor(Motor *_motor);           // adding motors
+    InputIO *inputIo;                       // input (speed control)
 
     void generatePulse();                   // one pulse generate
 
@@ -84,21 +97,27 @@ public:
 
     float setDelay2();                      // setting delay for N step
 
-    void setSpeed(float speed);
-
-    float getSpeed();
-
+    // moving overloaded method
     void moving(long _x, long _y, long _z, long _a, long _b, long _c, void(*)());
+
+    void moving(long _x, long _y, long _z, long _a, long _b, long _c);
+
+    void moving(long _x, long _y, long _z, long _a, long _b);
+
+    void moving(long _x, long _y, long _z, long _a);
+
+    void moving(long _x, long _y, long _z);
+
+    void moving(long _x, long _y);
+
+    void moving(long _x);
+
 
     void pauseMoving();                     // pause method
 
     void resumeMoving();                    // resume method
 
     void changeSpeed();
-
-    void readSpeedController();
-
-    void firstReadSpeedController();
 
     bool movingDone() const;                      // moving done?
 
@@ -115,8 +134,6 @@ private:
     void setMaxLongDy();         // find maxDy in the motors
 
     void bresenham(long _x2, long _y2, long _z2, long _a2, long _b2, long _c2);
-
-
 
 //
 //
@@ -151,19 +168,19 @@ private:
 //
 
 /// variable ////////////////////////////////////////////////////////
-public:
-    unsigned short motorIndex;          // added motor number
+private:
     unsigned short maxDyMotor;          // max long distance moving motor
 
+public:
     unsigned long totalMovedCounter;    // Total number of steps moved (총 이동 스텝 수)
     unsigned long stepCounter;          // number of moving steps to calculate delayValue, accelNstep, decelNstep, elapsedCounter
     unsigned long elapsedCounter;       // summing elapsed step
 
     unsigned int accelNstep;            // Number of steps used for acceleration (가속에 사용된 스텝 수)
     unsigned int decelNstep;            // Number of steps to be used for deceleration (감속에 사용될 스텝 수)
-    unsigned int previousDecelNstep;           // Speed changed decelNstep
+    unsigned int previousDecelNstep;    // Speed changed decelNstep
 
-    volatile float delayValue;          // current delay value (현재 스텝과 스텝 사이의 값)
+    float delayValue;                   // current delay value (현재 스텝과 스텝 사이의 값)
     float minDelayValue;                // max speed
     float previousMinDelayValue;        // previous max speed
 
@@ -171,19 +188,21 @@ public:
     // 0100 0000    : deceleration_msk
     // 0010 0000    : constantSpeed_msk
     // 0001 0000    : acceleration_msk
-    // 0000 1000    : movementDone
-    // 0000 0100    : changeSpeed
-    // 0000 0010    : resume
-    // 0000 0001    : pause
+    // 0000 1000    : movementDone_msk
+    // 0000 0100    : changeSpeed_msk
+    // 0000 0010    : resume_msk
+    // 0000 0001    : pause_msk
     unsigned short movingFlag;              // flag for moving status
-
-    unsigned short previousSpeedPercent;    // previous controlled speed percent
-
 };
+
+
 
 #ifdef USING_TM1638QYF
 extern TM1638QYF module;
 extern unsigned int mode;
 #endif
+
+extern void display();
+extern World world;
 
 #endif //STEPPER_MOTOR_STEPPERMOTORWORLD_HPP
