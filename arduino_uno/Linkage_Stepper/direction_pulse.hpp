@@ -1,5 +1,7 @@
-#ifndef STEPPER_MOTOR_DIRECTION_PULSE_HPP
-#define STEPPER_MOTOR_DIRECTION_PULSE_HPP
+
+#ifndef STEPPER_MOTOR_LIBRARY3_DIRECTION_PULSE_HPP
+#define STEPPER_MOTOR_LIBRARY3_DIRECTION_PULSE_HPP
+
 
 #include "StepperDefine.hpp"
 #define DELAY_BETWEEN_PULSE         3
@@ -40,4 +42,5 @@ void cPulse();
 /// C axis direction selection
 void cDirection(int dir);
 
-#endif //STEPPER_MOTOR_DIRECTION_PULSE_HPP
+
+#endif //STEPPER_MOTOR_LIBRARY3_DIRECTION_PULSE_HPP
