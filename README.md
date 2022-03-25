@@ -25,7 +25,7 @@ pin 17 (speed control analog input)
 //#define MAX_32_SPEED
 ```
 
-- file: Linkage_Stepper.ino
+- file: Linkage_Stepper.ino  
 Create movement
 ```cpp
 void loop() {
