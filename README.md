@@ -3,8 +3,8 @@ testing arduino uno
 
 # setup
 
-- file: StepperDefine.hpp:
-Set the number of axes to be used
+- file: StepperDefine.hpp:  
+Set the number of axes to be used  
 number of axis: 1u ~ 6u
 ```cpp
 /// number of axes to be used
@@ -49,4 +49,4 @@ void loop() {
 }
 ```
 
-   end
+end
