@@ -3,7 +3,7 @@ testing arduino uno
 
 # setup
 
-![picture](./wire diagram.png)  
+![picture](./wire_diagram.png)  
 
 - file: StepperDefine.hpp:  
 Set the number of axes to be used  
