@@ -3,6 +3,8 @@ testing arduino uno
 
 # setup
 
+![picture](https://github.com/i2make/6axis_bresenham_linkage_stepper_arduino/blob/main/wire diagram.png)  
+
 - file: StepperDefine.hpp:  
 Set the number of axes to be used  
 number of axis: 1u ~ 6u
