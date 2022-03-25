@@ -11,13 +11,13 @@ number of axis: 1u ~ 6u
 #define MAX_AXIS            5u          // number of axis (1u ~ 6u)
 ```
 
-- Pin define (line 108~)
-- pin 02 ~ 13 (X Y Z A B C axis direction, pulse)
- -pin 18 (pause button)
- -pin 19 (resume button)
- -pin 17 (speed control analog input)
+- Pin define (line 108~)  
+pin 02 ~ 13 (X Y Z A B C axis direction, pulse)  
+pin 18 (pause button)  
+pin 19 (resume button)  
+pin 17 (speed control analog input)
 
-Set Stepper speed
+- Set Stepper speed
 ```cpp
 /// stepper max speed
 //#define MAX_20_SPEED
